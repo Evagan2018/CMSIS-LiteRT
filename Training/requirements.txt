@@ -1,0 +1,9 @@
+# Python packages for training the model (Training/train_model.py). Installed
+# into Training/.venv by `./setup_venv.sh --training`. Not needed to build:
+# create_ai_layer.py only needs requirements.txt (Vela).
+#
+# TensorFlow 2.17 is what the pack's notebook uses; its wheels exist for
+# Python 3.9 to 3.12. tf-keras provides the Keras 2 API the converter expects
+# (TF_USE_LEGACY_KERAS=1).
+tensorflow==2.17.0
+tf-keras==2.17.0

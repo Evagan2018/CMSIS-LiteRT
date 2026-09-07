@@ -1,0 +1,75 @@
+# Copyright 2026 Arm Limited and/or its affiliates.
+# SPDX-License-Identifier: Apache-2.0
+#
+# TensorFlow Lite Micro "Hello World" (sine model) on the Ethos-U85 of the
+# Corstone-320 (SSE-320) FVP. Three steps build it:
+#
+#   cbuild setup cmsis-tflm-simple.csolution.yml --active SSE-320-U85
+#   python create_ai_layer.py cmsis-tflm-simple.cbuild-mlops.yml
+#   cbuild cmsis-tflm-simple.csolution.yml --active SSE-320-U85
+#
+# The `mlops:` node below makes `cbuild setup` emit the *.cbuild-mlops.yml;
+# create_ai_layer.py reads the NPU and Vela settings from it, compiles the
+# committed int8 model with Vela and writes the AI layer (Model/).
+solution:
+  created-for: CMSIS-Toolbox@2.14.1
+  cdefault:
+  compiler: AC6
+
+  packs:
+    - pack: tensorflow::tensorflow-lite-micro@1.26.2
+    - pack: tensorflow::flatbuffers@1.26.2
+    - pack: tensorflow::gemmlowp@1.26.2
+    - pack: tensorflow::kissfft@1.26.2
+    - pack: tensorflow::ruy@1.26.2
+    - pack: ARM::ethos-u-core-driver@1.26.2
+    - pack: ARM::CMSIS-NN@7.0.0
+    - pack: ARM::CMSIS
+    - pack: ARM::CMSIS-Compiler@^2.1.0
+    - pack: ARM::SSE_320_BSP@1.0.0
+
+  target-types:
+    # Corstone-320 with an Ethos-U85 NPU, simulated on the Arm FVP.
+    - type: SSE-320-U85
+      board: SSE-320
+      device: SSE-320-FVP
+      variables:
+        - Board-Layer: $SolutionDir()$/board/Corstone-320/Board-U85.clayer.yml
+      target-set:
+        - set:
+          images:
+            - project-context: cmsis-tflm-simple.Debug
+          debugger:
+            name: Arm-FVP
+            model: FVP_Corstone_SSE-320
+            config-file: board/Corstone-320/fvp_config.txt
+            args: "--simlimit 60 "
+
+  build-types:
+    - type: Debug
+      debug: on
+      optimize: debug
+
+  projects:
+    - project: ./cmsis-tflm-simple.cproject.yml
+
+  # MLOps information: exported to cmsis-tflm-simple.cbuild-mlops.yml by
+  # `cbuild setup ... --active SSE-320-U85`, from where create_ai_layer.py
+  # reads it. Retarget the NPU here and re-run the three steps.
+  # https://open-cmsis-pack.github.io/cmsis-toolbox/build-overview/#mlops-information
+  mlops:
+    description: Hello World sine model for Ethos-U85
+    npu:
+      type: Ethos-U85
+      # The SSE-320 BSP declares no NPU features, so the MAC count has to be
+      # given here. It must match mps4_board.subsystem.ethosu.num_macs in
+      # board/Corstone-320/fvp_config.txt.
+      macs: 256
+    vela:
+      system: Ethos_U85_SYS_DRAM_Mid # system-config from the Vela config
+      memory: Shared_Sram # memory-mode from the Vela config
+    model:
+      clayer: ./Model/model.clayer.yml
+      name: HelloWorld
+    simulator:
+      target: SSE-320-U85

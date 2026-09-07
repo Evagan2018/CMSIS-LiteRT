@@ -1,0 +1,57 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Setup Python virtual environment",
+            "type": "shell",
+            "command": "./setup_venv.sh",
+            "windows": {
+                "command": ".\\setup_venv.bat"
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Setup Python training environment",
+            "type": "shell",
+            "command": "./setup_venv.sh --training",
+            "windows": {
+                "command": ".\\setup_venv.bat --training"
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Train the model",
+            "detail": "Training/train_model.py writes Model/model_float.tflite and Model/model_int8.tflite",
+            "type": "shell",
+            "command": "Training/.venv/bin/python",
+            "args": ["Training/train_model.py"],
+            "windows": {
+                "command": "Training\\.venv\\Scripts\\python.exe"
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Create AI layer",
+            "detail": "Compile Model/model_int8.tflite for the NPU in cmsis-tflm-simple.cbuild-mlops.yml and write Model/ (run a CMSIS build or 'cbuild setup' first)",
+            "type": "shell",
+            "command": "python3",
+            "args": ["create_ai_layer.py", "cmsis-tflm-simple.cbuild-mlops.yml"],
+            "windows": {
+                "command": "python"
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
+        }
+    ]
+}

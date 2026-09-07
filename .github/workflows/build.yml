@@ -1,0 +1,122 @@
+# Copyright 2026 Arm Limited and/or its affiliates.
+# SPDX-License-Identifier: Apache-2.0
+#
+# The three-step build (cbuild setup, create_ai_layer.py, cbuild) followed by
+# an FVP run, plus a cross-platform check of the Python side.
+name: Build and Run
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  SOLUTION: cmsis-tflm-simple
+  TARGET: SSE-320-U85
+
+jobs:
+  # Full build plus an FVP run. Linux only: the FVP needs an Arm user-based
+  # license, so matrixing this across hosts is not cheap.
+  build-and-run:
+    name: Build and run on Corstone-320
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+
+      - name: Install tools
+        uses: ARM-software/cmsis-actions/vcpkg@v1
+
+      - name: Activate Arm tool license
+        uses: ARM-software/cmsis-actions/armlm@v1
+
+      - name: Cache packs
+        uses: actions/cache@v6
+        with:
+          key: cmsis-packs
+          path: /home/runner/.cache/arm/packs
+
+      - name: Cache Vela venv
+        uses: actions/cache@v6
+        with:
+          key: venv-${{ runner.os }}-${{ hashFiles('requirements.txt', 'setup_venv.py') }}
+          path: .venv
+
+      - name: Create Vela venv
+        run: ./setup_venv.sh
+
+      - name: Generate the MLOps information
+        run: cbuild setup ${SOLUTION}.csolution.yml --active ${TARGET} --packs --update-rte
+
+      - name: Create the AI layer
+        run: python3 create_ai_layer.py ${SOLUTION}.cbuild-mlops.yml
+
+      - name: Build
+        run: cbuild ${SOLUTION}.csolution.yml --active ${TARGET}
+
+      - name: Run on the FVP
+        run: |
+          IMAGE=$(find out -name "${SOLUTION}.axf" -o -name "${SOLUTION}.elf" | head -1)
+          echo "Running ${IMAGE}"
+          FVP_Corstone_SSE-320 \
+              -f board/Corstone-320/fvp_config.txt \
+              -a "${IMAGE}" \
+              --simlimit 60 --stat \
+              | tee fvp_stdout.log
+
+          echo "Checking simulation output"
+          grep -q "MACs/cc:    256" fvp_stdout.log
+          grep -q "Perform Inference (Ethos-U)" fvp_stdout.log
+          grep -q "~~~ALL TESTS PASSED~~~" fvp_stdout.log
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: corstone-320-build
+          path: |
+            fvp_stdout.log
+            out/**/*.axf
+            out/**/*.elf
+            Model/
+
+  # The Python side must work on all three host OSes. No FVP and no Arm
+  # license needed, so this is cheap to matrix. The CPU fixture also covers
+  # the CMSIS-NN variant of the generated layer.
+  venv-cross-platform:
+    name: Vela venv and CPU layer (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Create Vela venv (POSIX)
+        if: runner.os != 'Windows'
+        run: ./setup_venv.sh
+
+      - name: Create Vela venv (Windows)
+        if: runner.os == 'Windows'
+        run: .\setup_venv.bat
+
+      - name: Generate the CPU variant of the AI layer
+        shell: bash
+        run: |
+          cp Model/model_int8.tflite Model/model_float.tflite tests/layer/ 2>/dev/null || { mkdir -p tests/layer; cp Model/model_int8.tflite Model/model_float.tflite tests/layer/; }
+          python create_ai_layer.py tests/cpu.cbuild-mlops.yml
+          grep -q 'Kernel&CMSIS-NN' tests/layer/model.clayer.yml
+          grep -q 'model_int8_tflite_len = 3376' tests/layer/model_int8.c
+          echo "CPU layer OK"
