@@ -12,6 +12,12 @@ layer:
     - pack: tensorflow::kissfft
     - pack: tensorflow::ruy
 
+  define:
+    # CMSIS-NN 8.0.0 compiles its float kernels only with these set, but
+    # its NN Lib component lists the sources unconditionally.
+    - ARM_NN_ENABLE_F32: 1
+    - ARM_NN_ENABLE_F16: 1
+
   components:
     - component: tensorflow::Data Exchange:Serialization:flatbuffers
     - component: tensorflow::Data Processing:Math:gemmlowp fixed-point
