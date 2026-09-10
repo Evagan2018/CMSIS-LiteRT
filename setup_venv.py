@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Create the Python venvs: .venv (Vela, for create_ai_layer.py) and, with
-# --training, Training/.venv (TensorFlow, for Training/train_model.py). No Docker.
+# --training, Training/.venv (TensorFlow, for Training/train_model.py).
 #
 # Runs on Linux, macOS and Windows. The thin wrappers setup_venv.sh and
 # setup_venv.bat just delegate here; everything OS-specific lives in this file.
@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -55,9 +56,9 @@ def check_host_python(what: str, lo: tuple[int, int], hi: tuple[int, int]) -> No
 def venv_is_usable(venv_dir: Path) -> bool:
     """True if the venv exists and its interpreter still runs.
 
-    /workspaces persists across devcontainer rebuilds, so an existing .venv can
-    reference the previous image's interpreter: the directory is there but the
-    symlinks and lib/pythonX.Y paths are stale.
+    A venv outlives the interpreter it was created from (a Python upgrade, a
+    removed pyenv version): the directory is there but the symlinks and
+    lib/pythonX.Y paths are stale.
     """
     python = venv_python(venv_dir)
     if not python.is_file():
@@ -74,8 +75,41 @@ def venv_is_usable(venv_dir: Path) -> bool:
     return True
 
 
-def pip(python: Path, *args: str, env: dict[str, str] | None = None) -> None:
-    cmd = [str(python), "-m", "pip", *args]
+def python_version(value: str) -> tuple[int, ...]:
+    """Accept a major.minor version, optionally with a patch version; the range is checked later."""
+    if not re.fullmatch(r"[0-9]+\.[0-9]+(?:\.[0-9]+)?", value):
+        raise argparse.ArgumentTypeError("expected a Python version such as 3.12 or 3.12.10")
+    return tuple(int(n) for n in value.split("."))
+
+
+def check_venv_python(python: Path, what: str, lo: tuple[int, int], hi: tuple[int, int], requested) -> None:
+    """The venv's interpreter must be in range and, with --python, the one asked for."""
+    result = subprocess.run(
+        [str(python), "-c", "import sys; print('.'.join(map(str, sys.version_info[:3])))"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    have = result.stdout.strip()
+    version = tuple(int(n) for n in have.split("."))
+    if not (lo <= version[:2] < hi):
+        sys.exit(
+            f"error: {python} uses Python {have}; {what} needs >={lo[0]}.{lo[1]},<{hi[0]}.{hi[1]}. "
+            "Re-run with --recreate and a supported Python version."
+        )
+    if requested and version[: len(requested)] != requested:
+        want = ".".join(map(str, requested))
+        sys.exit(
+            f"error: the venv uses Python {have}, but --python {want} was requested. "
+            "Re-run with --recreate to change the environment's Python version."
+        )
+
+
+def pip(python: Path, *args: str, uv: str | None = None, env: dict[str, str] | None = None) -> None:
+    if uv:
+        cmd = [uv, "pip", *args, "--python", str(python)]
+    else:
+        cmd = [str(python), "-m", "pip", *args]
     print(f"+ {' '.join(cmd)}", flush=True)
     subprocess.run(cmd, check=True, env=env)
 
@@ -96,6 +130,20 @@ def main() -> int:
         help="create Training/.venv (TensorFlow) for Training/train_model.py instead of .venv (Vela)",
     )
     parser.add_argument(
+        "--uv",
+        action="store_true",
+        help="create the environment with `uv venv` and install with `uv pip` (needs uv on PATH)",
+    )
+    parser.add_argument(
+        "--python",
+        metavar="VERSION",
+        type=python_version,
+        help=(
+            "Python version for uv, e.g. 3.12 or 3.12.10 (needs --uv; default: the "
+            "interpreter running this script, or uv's own pick through the wrappers)"
+        ),
+    )
+    parser.add_argument(
         "--recreate",
         action="store_true",
         help="delete and rebuild the venv even if it looks usable",
@@ -103,8 +151,20 @@ def main() -> int:
     args = parser.parse_args()
 
     what = "training" if args.training else "vela"
+    tool = "TensorFlow" if args.training else "Vela"
     venv_dir, requirements, lo, hi = VENVS[what]
-    check_host_python("TensorFlow" if args.training else "Vela", lo, hi)
+    if args.python and not args.uv:
+        parser.error("--python requires --uv")
+    if args.python and not (lo <= args.python[:2] < hi):
+        parser.error(f"{tool} needs Python >={lo[0]}.{lo[1]},<{hi[0]}.{hi[1]}")
+    uv = shutil.which("uv") if args.uv else None
+    if args.uv and not uv:
+        parser.error(
+            "--uv requires uv on PATH; install it from "
+            "https://docs.astral.sh/uv/getting-started/installation/"
+        )
+    if not args.python:
+        check_host_python(tool, lo, hi)
 
     if args.recreate and venv_dir.exists():
         print(f"Removing {venv_dir}")
@@ -116,11 +176,21 @@ def main() -> int:
 
     if not venv_dir.exists():
         print(f"Creating venv at {venv_dir}")
-        venv.EnvBuilder(with_pip=True, symlinks=os.name != "nt").create(venv_dir)
+        if uv:
+            # The wrapper may run this script in uv's temporary isolated
+            # environment: request a version, not a path inside that environment.
+            requested = ".".join(map(str, args.python or sys.version_info[:3]))
+            cmd = [uv, "venv", "--python", requested, str(venv_dir)]
+            print(f"+ {' '.join(cmd)}", flush=True)
+            subprocess.run(cmd, check=True)
+        else:
+            venv.EnvBuilder(with_pip=True, symlinks=os.name != "nt").create(venv_dir)
 
     python = venv_python(venv_dir)
-    pip(python, "install", "--upgrade", "pip")
-    pip(python, "install", "-r", str(requirements))
+    check_venv_python(python, tool, lo, hi, args.python)
+    if not uv:
+        pip(python, "install", "--upgrade", "pip")
+    pip(python, "install", "-r", str(requirements), uv=uv)
     smoke_test(python, what)
 
     print()

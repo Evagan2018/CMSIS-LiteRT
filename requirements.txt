@@ -1,4 +1,4 @@
-# Python packages for create_ai_layer.py (venv, no Docker): the Ethos-U
+# Python packages for create_ai_layer.py: the Ethos-U
 # compiler and a YAML reader for the *.cbuild-mlops.yml. Training the model
 # needs TensorFlow as well; that lives in Training/requirements.txt.
 ethos-u-vela==5.1.0
