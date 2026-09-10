@@ -41,10 +41,10 @@
         },
         {
             "label": "Create AI layer",
-            "detail": "Compile Model/model_int8.tflite for the NPU in cmsis-tflm-simple.cbuild-mlops.yml and write Model/ (run a CMSIS build or 'cbuild setup' first)",
+            "detail": "Compile Model/model_int8.tflite for the NPU in cmsis-litert.cbuild-mlops.yml and write Model/ (run a CMSIS build or 'cbuild setup' first)",
             "type": "shell",
             "command": "python3",
-            "args": ["create_ai_layer.py", "cmsis-tflm-simple.cbuild-mlops.yml"],
+            "args": ["create_ai_layer.py", "cmsis-litert.cbuild-mlops.yml"],
             "windows": {
                 "command": "python"
             },

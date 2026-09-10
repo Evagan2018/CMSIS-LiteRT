@@ -4,9 +4,9 @@
 # TensorFlow Lite Micro "Hello World" (sine model) on the Ethos-U85 of the
 # Corstone-320 (SSE-320) FVP. Three steps build it:
 #
-#   cbuild setup cmsis-tflm-simple.csolution.yml --active SSE-320-U85
-#   python create_ai_layer.py cmsis-tflm-simple.cbuild-mlops.yml
-#   cbuild cmsis-tflm-simple.csolution.yml --active SSE-320-U85
+#   cbuild setup cmsis-litert.csolution.yml --active SSE-320-U85
+#   python create_ai_layer.py cmsis-litert.cbuild-mlops.yml
+#   cbuild cmsis-litert.csolution.yml --active SSE-320-U85
 #
 # The `mlops:` node below makes `cbuild setup` emit the *.cbuild-mlops.yml;
 # create_ai_layer.py reads the NPU and Vela settings from it, compiles the
@@ -38,12 +38,18 @@ solution:
       target-set:
         - set:
           images:
-            - project-context: cmsis-tflm-simple.Debug
+            - project-context: cmsis-litert.Debug
           debugger:
             name: Arm-FVP
-            model: FVP_Corstone_SSE-320
+            # The model is its own GDB server (plugins/GDBServer.so, MDK FVP
+            # models 11.32.23+). fvp.sh resolves that plugin when VS Code was
+            # not started from a `vcpkg activate` shell, line-buffers the
+            # model's stdout so the debug adapter sees the "Listening" banner,
+            # and on macOS runs the model in Docker (Arm ships no macOS build).
+            # On Windows point this straight at FVP_Corstone_SSE-320.exe.
+            model: ${workspaceFolder}/.vscode/fvp.sh
             config-file: board/Corstone-320/fvp_config.txt
-            args: "--simlimit 60 "
+            args: "--simlimit 60"
 
   build-types:
     - type: Debug
@@ -51,9 +57,9 @@ solution:
       optimize: debug
 
   projects:
-    - project: ./cmsis-tflm-simple.cproject.yml
+    - project: ./cmsis-litert.cproject.yml
 
-  # MLOps information: exported to cmsis-tflm-simple.cbuild-mlops.yml by
+  # MLOps information: exported to cmsis-litert.cbuild-mlops.yml by
   # `cbuild setup ... --active SSE-320-U85`, from where create_ai_layer.py
   # reads it. Retarget the NPU here and re-run the three steps.
   # https://open-cmsis-pack.github.io/cmsis-toolbox/build-overview/#mlops-information

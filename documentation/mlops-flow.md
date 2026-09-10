@@ -1,6 +1,6 @@
 # The MLOps flow
 
-The `mlops:` node in `cmsis-tflm-simple.csolution.yml` is the central definition
+The `mlops:` node in `cmsis-litert.csolution.yml` is the central definition
 of the Ethos-U target for this example. It follows the CMSIS-Toolbox
 [MLOps information](https://open-cmsis-pack.github.io/cmsis-toolbox/build-overview/#mlops-information)
 specification. This document explains how the three build steps use and
@@ -8,14 +8,14 @@ propagate that information.
 
 ```mermaid
 flowchart TD
-    A["cmsis-tflm-simple.csolution.yml<br/><b>mlops:</b> node"] -->|"1. cbuild setup --active SSE-320-U85"| B["cmsis-tflm-simple.cbuild-mlops.yml<br/>npu, vela.options, model.clayer"]
+    A["cmsis-litert.csolution.yml<br/><b>mlops:</b> node"] -->|"1. cbuild setup --active SSE-320-U85"| B["cmsis-litert.cbuild-mlops.yml<br/>npu, vela.options, model.clayer"]
     B -->|"2. create_ai_layer.py"| C["Vela"]
     D["Model/model_int8.tflite<br/>Model/model_float.tflite<br/>(Training/train_model.py)"] --> C
     C --> E["Model/model_int8.c, model_float.c<br/>the models as C arrays"]
     C --> F["Model/model.clayer.yml<br/>kernel variant + model files"]
     E --> G["3. cbuild --active SSE-320-U85"]
     F --> G
-    G --> H["cmsis-tflm-simple.axf"]
+    G --> H["cmsis-litert.axf"]
 ```
 
 ## 1. `cbuild setup` turns the csolution into `*.cbuild-mlops.yml`
@@ -39,8 +39,8 @@ solution:
       target: SSE-320-U85
 ```
 
-`cbuild setup cmsis-tflm-simple.csolution.yml --active SSE-320-U85` resolves
-it for the active target and writes `cmsis-tflm-simple.cbuild-mlops.yml`:
+`cbuild setup cmsis-litert.csolution.yml --active SSE-320-U85` resolves
+it for the active target and writes `cmsis-litert.cbuild-mlops.yml`:
 
 ```yaml
 cbuild-mlops:
@@ -72,7 +72,7 @@ the flow also works on a checkout without a generated layer.
 
 ## 2. `create_ai_layer.py` turns `*.cbuild-mlops.yml` into the AI layer
 
-`python create_ai_layer.py cmsis-tflm-simple.cbuild-mlops.yml` stands in for an
+`python create_ai_layer.py cmsis-litert.cbuild-mlops.yml` stands in for an
 MLOps system. It reads the file and:
 
 1. runs Vela on `Model/model_int8.tflite` with exactly the options from
@@ -98,7 +98,7 @@ selects that library explicitly.
 
 ## 3. `cbuild` builds the application
 
-`cbuild cmsis-tflm-simple.csolution.yml --active SSE-320-U85` is a plain CMSIS
+`cbuild cmsis-litert.csolution.yml --active SSE-320-U85` is a plain CMSIS
 build. The cproject knows nothing about the model: it lists the application
 source and the two layers, and the AI layer contributes both the kernel
 selection and the model data. There is no `executes:` node and no build-time

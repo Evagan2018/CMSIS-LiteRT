@@ -11,7 +11,7 @@ application.
 ## What the example demonstrates
 
 - The NPU and its Vela configuration live in the CMSIS solution (`mlops:` node), not in Python.
-- `cbuild setup` hands them to the MLOps side as `cmsis-tflm-simple.cbuild-mlops.yml`.
+- `cbuild setup` hands them to the MLOps side as `cmsis-litert.cbuild-mlops.yml`.
 - `create_ai_layer.py` compiles the int8 model with Vela for exactly that NPU and writes the
   complete AI layer: the TensorFlow Lite Micro kernel variant for the target and the model data.
 - The same application source runs the int8 model on the NPU or, for a target without one, on the
@@ -75,11 +75,11 @@ needs. It is safe to run again; `--recreate` starts from scratch.
 #### 1. Generate the MLOps information
 
 ```bash
-cbuild setup cmsis-tflm-simple.csolution.yml --active SSE-320-U85 --packs --update-rte
+cbuild setup cmsis-litert.csolution.yml --active SSE-320-U85 --packs --update-rte
 ```
 
 This resolves the packs and the active target and writes
-`cmsis-tflm-simple.cbuild-mlops.yml`: the processor, NPU and Vela options of the
+`cmsis-litert.cbuild-mlops.yml`: the processor, NPU and Vela options of the
 target and the location of the AI layer. (`--packs` and `--update-rte` are only
 needed on a fresh checkout. On a checkout without a generated `Model/` layer the
 command reports the missing layer but still writes the file.)
@@ -87,7 +87,7 @@ command reports the missing layer but still writes the file.)
 #### 2. Create the AI layer
 
 ```bash
-python3 create_ai_layer.py cmsis-tflm-simple.cbuild-mlops.yml
+python3 create_ai_layer.py cmsis-litert.cbuild-mlops.yml
 ```
 
 This is the MLOps step. The script reads the NPU and Vela settings from the
@@ -99,13 +99,13 @@ arrays. It runs itself in `.venv` when started with another interpreter (use
 #### 3. Build the application
 
 ```bash
-cbuild cmsis-tflm-simple.csolution.yml --active SSE-320-U85
+cbuild cmsis-litert.csolution.yml --active SSE-320-U85
 ```
 
 A plain CMSIS build; no Python is involved. The resulting image is:
 
 ```text
-out/cmsis-tflm-simple/SSE-320-U85/Debug/cmsis-tflm-simple.axf
+out/cmsis-litert/SSE-320-U85/Debug/cmsis-litert.axf
 ```
 
 #### 4. Run on the FVP
@@ -113,7 +113,7 @@ out/cmsis-tflm-simple/SSE-320-U85/Debug/cmsis-tflm-simple.axf
 ```bash
 FVP_Corstone_SSE-320 \
     -f board/Corstone-320/fvp_config.txt \
-    -a out/cmsis-tflm-simple/SSE-320-U85/Debug/cmsis-tflm-simple.axf
+    -a out/cmsis-litert/SSE-320-U85/Debug/cmsis-litert.axf
 ```
 
 The application ends the simulation when it is done.
@@ -121,7 +121,7 @@ The application ends the simulation when it is done.
 ## How model generation works
 
 The target is described by the `mlops:` node in
-`cmsis-tflm-simple.csolution.yml`:
+`cmsis-litert.csolution.yml`:
 
 ```yaml
 mlops:
@@ -137,7 +137,7 @@ mlops:
 ```
 
 `cbuild setup --active SSE-320-U85` resolves it into
-`cmsis-tflm-simple.cbuild-mlops.yml`, which carries the Vela command line
+`cmsis-litert.cbuild-mlops.yml`, which carries the Vela command line
 (`--accelerator-config ethos-u85-256 --system-config ... --memory-mode ...`).
 `create_ai_layer.py` passes that to Vela, so the target configuration is never
 duplicated in Python. The script then writes:
@@ -179,8 +179,8 @@ driver, and FVP configuration.
 
 | Path | Purpose |
 |------|---------|
-| `cmsis-tflm-simple.csolution.yml` | Solution, target, and MLOps configuration |
-| `cmsis-tflm-simple.cproject.yml` | Application project: source plus the Board and AI layers |
+| `cmsis-litert.csolution.yml` | Solution, target, and MLOps configuration |
+| `cmsis-litert.cproject.yml` | Application project: source plus the Board and AI layers |
 | `create_ai_layer.py` | Compiles the model for the target and writes the AI layer |
 | `Model/` | The trained `.tflite` models and the generated AI layer |
 | `Training/train_model.py` | Trains and exports the sine model |
