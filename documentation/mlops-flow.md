@@ -35,16 +35,21 @@ solution:
     model:
       clayer: ./Model/model.clayer.yml
       name: HelloWorld
-    simulator:
-      target: SSE-320-U85              # <target-type>[@<target-set>] of the FVP
+      int8-model: model_int8.tflite    # passed through to create_ai_layer.py
+      float-model: model_float.tflite
 ```
+
+The `simulator:` target is detected from the Arm-FVP target-set by
+CMSIS-Toolbox 2.14.1+p88 and newer, and the extra keys under `model:` are
+passed through; the released 2.14.1 needs the target named explicitly
+(`simulator: target: SSE-320-U85`) and rejects the extra keys.
 
 `cbuild setup cmsis-litert.csolution.yml --active SSE-320-U85` resolves
 it for the active target and writes `cmsis-litert.cbuild-mlops.yml`:
 
 ```yaml
 cbuild-mlops:
-  generated-by: csolution version 2.14.1+p38-gf512b381
+  generated-by: csolution version 2.14.1+p88-g94cb0c5e
   description: Hello World sine model for Ethos-U85
   processor:
     type: Cortex-M85
@@ -56,6 +61,8 @@ cbuild-mlops:
   model:
     clayer: Model/model.clayer.yml
     name: HelloWorld
+    float-model: model_float.tflite
+    int8-model: model_int8.tflite
   simulator:
     active: SSE-320-U85
     cbuild-run: out/cmsis-litert+SSE-320-U85.cbuild-run.yml

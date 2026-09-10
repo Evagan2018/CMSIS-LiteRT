@@ -24,7 +24,9 @@ writes the complete AI layer into the directory of the clayer named under
     model_float.c      the float model as a C array (runs on the CPU)
 
 The models come from Model/model_int8.tflite and Model/model_float.tflite,
-which Training/train_model.py produces.
+which Training/train_model.py produces; the extra keys `int8-model` and
+`float-model` of the `model:` node (CMSIS-Toolbox 2.14.1+p88 passes them
+through) name other files, relative to the layer directory.
 
 The script runs itself in the solution's .venv (see setup_venv.py) when it is
 started with an interpreter that has no Vela.
@@ -77,9 +79,19 @@ def vela_command(mlops: dict, mlops_dir: Path, model: Path, out_dir: Path) -> li
     return [sys.executable, "-m", "ethosu.vela", str(model), "--output-dir", str(out_dir), *shlex.split(options)]
 
 
-def compile_int8(mlops: dict, mlops_dir: Path, layer_dir: Path) -> tuple[bytes, str]:
+def model_files(mlops: dict, layer_dir: Path) -> tuple[Path, Path]:
+    """The int8 and float model files: from the model: node's extra keys, else the defaults."""
+    params = mlops["model"]
+    for key in params:
+        if key not in ("clayer", "name", "int8-model", "float-model"):
+            print(f"[ai_layer] warning: ignoring unknown model key {key!r}", file=sys.stderr)
+    int8 = layer_dir / params.get("int8-model", "model_int8.tflite")
+    float_ = layer_dir / params.get("float-model", "model_float.tflite")
+    return int8, float_
+
+
+def compile_int8(mlops: dict, mlops_dir: Path, layer_dir: Path, model: Path) -> tuple[bytes, str]:
     """The int8 model: Vela-compiled for the NPU, or as trained without one."""
-    model = layer_dir / "model_int8.tflite"
     if "npu" not in mlops:
         return model.read_bytes(), "plain int8 (the target has no NPU)"
 
@@ -97,7 +109,7 @@ def compile_int8(mlops: dict, mlops_dir: Path, layer_dir: Path) -> tuple[bytes, 
                 "application only registers the Ethos-U operator for the int8 model.\n"
                 + result.stdout
             )
-        compiled = Path(tmp) / "model_int8_vela.tflite"
+        compiled = Path(tmp) / f"{model.stem}_vela.tflite"
         (layer_dir / compiled.name).write_bytes(compiled.read_bytes())  # kept for inspection
     return compiled.read_bytes() if compiled.exists() else (layer_dir / compiled.name).read_bytes(), (
         f"Vela {cmd[cmd.index('--accelerator-config') + 1]} ({summary})"
@@ -176,14 +188,16 @@ def main() -> None:
     layer_file = mlops_file.parent / mlops["model"]["clayer"]
     layer_dir = layer_file.parent
 
-    for name in ("model_int8.tflite", "model_float.tflite"):
-        if not (layer_dir / name).is_file():
-            sys.exit(f"{layer_dir / name} is missing; run Training/train_model.py first")
+    int8_model, float_model = model_files(mlops, layer_dir)
+    for path in (int8_model, float_model):
+        if not path.is_file():
+            sys.exit(f"{path} is missing; run Training/train_model.py first")
+    print(f"[ai_layer] models: {int8_model.name}, {float_model.name}")
 
-    int8, provenance = compile_int8(mlops, mlops_file.parent, layer_dir)
+    int8, provenance = compile_int8(mlops, mlops_file.parent, layer_dir, int8_model)
     (layer_dir / "model_int8.c").write_text(c_array(int8, "model_int8_tflite", provenance), newline="\n")
     (layer_dir / "model_float.c").write_text(
-        c_array((layer_dir / "model_float.tflite").read_bytes(), "model_float_tflite", "float model as trained"),
+        c_array(float_model.read_bytes(), "model_float_tflite", "float model as trained"),
         newline="\n",
     )
     layer_file.write_text(clayer(mlops, mlops_file), newline="\n")

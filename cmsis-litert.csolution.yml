@@ -63,6 +63,11 @@ solution:
   # `cbuild setup ... --active SSE-320-U85`, from where create_ai_layer.py
   # reads it. Retarget the NPU here and re-run the three steps.
   # https://open-cmsis-pack.github.io/cmsis-toolbox/build-overview/#mlops-information
+  #
+  # Needs CMSIS-Toolbox 2.14.1+p88 or newer (Keil Studio csolution extension
+  # 1.70.1 or newer): the simulator target is detected from the Arm-FVP
+  # target-set, and the extra keys under model: are passed through to
+  # create_ai_layer.py. Older toolboxes reject the extra keys.
   mlops:
     description: Hello World sine model for Ethos-U85
     npu:
@@ -77,5 +82,7 @@ solution:
     model:
       clayer: ./Model/model.clayer.yml
       name: HelloWorld
-    simulator:
-      target: SSE-320-U85
+      # Model parameters for create_ai_layer.py: the trained models, relative
+      # to the layer directory, and the delta the test accepts.
+      int8-model: model_int8.tflite
+      float-model: model_float.tflite

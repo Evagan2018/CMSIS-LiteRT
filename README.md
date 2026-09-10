@@ -24,6 +24,7 @@ application.
 - Python `>=3.10` for the build (Vela); Python `3.9` to `3.12` only if you want to retrain (TensorFlow 2.17).
 - [Keil Studio for VS Code](https://marketplace.visualstudio.com/items?itemName=Arm.keil-studio-pack) from the VS Code marketplace.
 - Tools listed in [`vcpkg-configuration.json`](./vcpkg-configuration.json) (CMSIS-Toolbox 2.14.1, Arm Compiler 6, Corstone-320 FVP); the Arm Tools Environment Manager installs them when the project is opened.
+- This branch needs CMSIS-Toolbox 2.14.1+p88 or newer, as bundled with the Keil Studio csolution extension 1.70.1 or newer; see [How model generation works](#how-model-generation-works). The `main` branch works with the released 2.14.1.
 - Keil Studio manages the required license; the free Keil MDK Community edition can be used for evaluation.
 
 ## Quick start
@@ -151,13 +152,21 @@ mlops:
   model:
     clayer: ./Model/model.clayer.yml
     name: HelloWorld
+    int8-model: model_int8.tflite
+    float-model: model_float.tflite
 ```
 
 `cbuild setup --active SSE-320-U85` resolves it into
 `cmsis-litert.cbuild-mlops.yml`, which carries the Vela command line
-(`--accelerator-config ethos-u85-256 --system-config ... --memory-mode ...`).
-`create_ai_layer.py` passes that to Vela, so the target configuration is never
-duplicated in Python. The script then writes:
+(`--accelerator-config ethos-u85-256 --system-config ... --memory-mode ...`)
+and the FVP target-set as the `simulator:` to test on, detected from the
+`Arm-FVP` debugger of the target-set. `create_ai_layer.py` passes the Vela
+options to Vela, so the target configuration is never duplicated in Python.
+The two extra keys under `model:` are parameters of the model itself; the
+toolbox passes them through and the script uses them to find the trained
+models. This needs CMSIS-Toolbox 2.14.1+p88 or newer; an older toolbox stops
+at `error csolution: schema check failed, verify syntax` on those two lines.
+The script then writes:
 
 - `Model/model.clayer.yml`: the TensorFlow Lite Micro components for the target,
   `Kernel&Ethos-U` when the file names an NPU, `Kernel&CMSIS-NN` otherwise.
