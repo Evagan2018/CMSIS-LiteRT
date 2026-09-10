@@ -37,6 +37,17 @@ solution:
     - pack: ARM::CMSIS-Compiler@^2.1.0
     - pack: ARM::SSE_320_BSP@1.0.0
 
+  misc:
+    # CMSIS-Toolbox 2.14.1 passes -mfpu=fpv5-sp-d16 to Clang for the Cortex-M85,
+    # a single-precision FPU on a core with a double-precision one and MVE. The
+    # later option wins, so name the M85's FPU explicitly (newer toolboxes leave
+    # it to -mcpu).
+    - for-compiler: CLANG
+      C-CPP:
+        - -mfpu=fp-armv8-fullfp16-d16
+      ASM:
+        - -mfpu=fp-armv8-fullfp16-d16
+
   target-types:
     # Corstone-320 with an Ethos-U85 NPU, simulated on the Arm FVP, with the
     # board layer shipped in board/Corstone-320 (STDOUT and the Ethos-U driver).
