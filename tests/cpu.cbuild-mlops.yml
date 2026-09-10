@@ -1,0 +1,13 @@
+# Hand-written stand-in for the file `cbuild setup` writes for a target
+# without an NPU (no npu:/vela: nodes). Used by CI to exercise the CMSIS-NN
+# variant of the AI layer without an FVP:
+#   python3 create_ai_layer.py tests/cpu.cbuild-mlops.yml
+# writes tests/layer/model.clayer.yml from the models in tests/layer/.
+cbuild-mlops:
+  generated-by: hand-written, see the comment above
+  description: Hello World sine model on the CPU
+  processor:
+    type: Cortex-M55
+  model:
+    clayer: layer/model.clayer.yml
+    name: HelloWorld
