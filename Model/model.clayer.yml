@@ -6,11 +6,11 @@ layer:
   description: Hello World sine model for Ethos-U85
 
   packs:
-    - pack: tensorflow::tensorflow-lite-micro
-    - pack: tensorflow::flatbuffers
-    - pack: tensorflow::gemmlowp
-    - pack: tensorflow::kissfft
-    - pack: tensorflow::ruy
+    - pack: tensorflow::tensorflow-lite-micro@1.26.2
+    - pack: tensorflow::flatbuffers@1.26.2
+    - pack: tensorflow::gemmlowp@1.26.2
+    - pack: tensorflow::kissfft@1.26.2
+    - pack: tensorflow::ruy@1.26.2
 
   define:
     # CMSIS-NN 8.0.0 compiles its float kernels only with these set, but
