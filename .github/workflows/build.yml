@@ -33,10 +33,19 @@ jobs:
       - name: Activate Arm tool license
         uses: ARM-software/cmsis-actions/armlm@v1
 
+      # The FVP loads the runner's libpython3.11, whose standard library is
+      # not where that build's prefix says; the model then dies at start-up
+      # with "Fatal Python error: init_fs_encoding". PYTHONHOME (set on the
+      # FVP step only) points it at a complete Python 3.11.
+      - name: Set up Python 3.11 for the FVP
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Cache packs
         uses: actions/cache@v6
         with:
-          key: cmsis-packs
+          key: cmsis-packs-${{ hashFiles('*.csolution.yml') }}
           path: /home/runner/.cache/arm/packs
 
       - name: Cache Vela venv
@@ -49,7 +58,7 @@ jobs:
         run: ./setup_venv.sh
 
       - name: Generate the MLOps information
-        run: cbuild setup ${SOLUTION}.csolution.yml --active ${TARGET} --packs --update-rte
+        run: cbuild setup ${SOLUTION}.csolution.yml --active ${TARGET} --packs
 
       - name: Create the AI layer
         run: python3 create_ai_layer.py ${SOLUTION}.cbuild-mlops.yml
@@ -58,6 +67,8 @@ jobs:
         run: cbuild ${SOLUTION}.csolution.yml --active ${TARGET}
 
       - name: Run on the FVP
+        env:
+          PYTHONHOME: ${{ env.pythonLocation }}
         run: |
           IMAGE=$(find out -name "${SOLUTION}.axf" -o -name "${SOLUTION}.elf" | head -1)
           echo "Running ${IMAGE}"
