@@ -8,12 +8,12 @@ propagate that information.
 
 ```mermaid
 flowchart TD
-    A["cmsis-litert.csolution.yml<br/><b>mlops:</b> node"] -->|"1. cbuild setup --active SSE-320-U85"| B["cmsis-litert.cbuild-mlops.yml<br/>npu, vela.options, model.clayer"]
+    A["cmsis-litert.csolution.yml<br/><b>mlops:</b> node"] -->|"1. cbuild setup --active &lt;target&gt;"| B["cmsis-litert.cbuild-mlops.yml<br/>npu, vela.options, model.clayer"]
     B -->|"2. create_ai_layer.py"| C["Vela"]
     D["Model/model_int8.tflite<br/>Model/model_float.tflite<br/>(Training/train_model.py)"] --> C
     C --> E["Model/model_int8.c, model_float.c<br/>the models as C arrays"]
     C --> F["Model/model.clayer.yml<br/>kernel variant + model files"]
-    E --> G["3. cbuild --active SSE-320-U85"]
+    E --> G["3. cbuild --active &lt;target&gt;"]
     F --> G
     G --> H["cmsis-litert.axf"]
 ```
@@ -36,7 +36,7 @@ solution:
       clayer: ./Model/model.clayer.yml
       name: HelloWorld
     simulator:
-      target: SSE-320-U85
+      target: SSE-320-U85              # <target-type>[@<target-set>] of the FVP
 ```
 
 `cbuild setup cmsis-litert.csolution.yml --active SSE-320-U85` resolves
@@ -44,6 +44,7 @@ it for the active target and writes `cmsis-litert.cbuild-mlops.yml`:
 
 ```yaml
 cbuild-mlops:
+  generated-by: csolution version 2.14.1+p38-gf512b381
   description: Hello World sine model for Ethos-U85
   processor:
     type: Cortex-M85
@@ -57,9 +58,16 @@ cbuild-mlops:
     name: HelloWorld
   simulator:
     active: SSE-320-U85
-    model: FVP_Corstone_SSE-320
+    cbuild-run: out/cmsis-litert+SSE-320-U85.cbuild-run.yml
+    output:
+      - file: out/cmsis-litert/SSE-320-U85/Debug/cmsis-litert.axf
+        type: elf
+    model: ${workspaceFolder}/.vscode/fvp.sh
     config-file: board/Corstone-320/fvp_config.txt
 ```
+
+The `simulator:` section is what a test runner needs to execute the image on
+the FVP.
 
 This is the hand-over point to the MLOps side: everything a model pipeline
 needs to know about the target is in this one file. For a device whose DFP
@@ -99,10 +107,10 @@ selects that library explicitly.
 ## 3. `cbuild` builds the application
 
 `cbuild cmsis-litert.csolution.yml --active SSE-320-U85` is a plain CMSIS
-build. The cproject knows nothing about the model: it lists the application
-source and the two layers, and the AI layer contributes both the kernel
-selection and the model data. There is no `executes:` node and no build-time
-Python.
+build without any Python. The cproject knows nothing about the model: it
+lists the application source and the two layers, and the AI layer contributes
+both the kernel selection and the model data. The layer and the C arrays are
+committed, so a checkout builds without Python.
 
 The application registers `FullyConnected` and, through `AddEthosU()`, the
 Ethos-U operator. The latter is a no-op when the CMSIS-NN kernel variant is

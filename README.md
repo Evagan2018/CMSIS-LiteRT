@@ -1,7 +1,8 @@
-# TensorFlow Lite Micro "Hello World" on Ethos-U
+# LiteRT for Microcontrollers "Hello World" on Ethos-U
 
-This example runs the TensorFlow Lite Micro (LiteRT) "Hello World" sine model on
-the Arm **Ethos-U85** NPU of the **Corstone-320 (SSE-320)** FVP. It is the
+This example runs the LiteRT for Microcontrollers (formerly TensorFlow Lite
+Micro) "Hello World" sine model on the Arm **Ethos-U85** NPU of the
+**Corstone-320 (SSE-320)** FVP. It is the
 [Hello World reference application](https://github.com/MDK-Packs/tensorflow-pack/tree/main/tensorflow-build/add/examples/TFLiteRT_HelloWorld)
 of the [`tensorflow::tensorflow-lite-micro`](https://www.keil.arm.com/packs/tensorflow-lite-micro-tensorflow/overview/)
 CMSIS pack, rebuilt around a three-step MLOps flow: the CMSIS-Toolbox describes
@@ -22,7 +23,7 @@ application.
 
 - Python `>=3.10` for the build (Vela); Python `3.9` to `3.12` only if you want to retrain (TensorFlow 2.17).
 - [Keil Studio for VS Code](https://marketplace.visualstudio.com/items?itemName=Arm.keil-studio-pack) from the VS Code marketplace.
-- Tools listed in [`vcpkg-configuration.json`](./vcpkg-configuration.json) (CMSIS-Toolbox 2.14.1, Arm Compiler 6, Corstone-320 FVP).
+- Tools listed in [`vcpkg-configuration.json`](./vcpkg-configuration.json) (CMSIS-Toolbox 2.14.1, Arm Compiler 6, Corstone-320 FVP); the Arm Tools Environment Manager installs them when the project is opened.
 - Keil Studio manages the required license; the free Keil MDK Community edition can be used for evaluation.
 
 ## Quick start
@@ -30,12 +31,19 @@ application.
 1. Install [Keil Studio for VS Code](https://marketplace.visualstudio.com/items?itemName=Arm.keil-studio-pack).
 2. Clone this repository and open its folder in VS Code.
 3. Before using the example for the first time, select **Terminal > Run Task >
-   Setup Python virtual environment**. It creates `.venv` with Vela.
+   Setup Python virtual environment**. It creates `.venv` with Vela. (The
+   **(uv)** variant of the task uses [uv](https://docs.astral.sh/uv/) and can
+   download the Python version it asks for.)
 4. Select **Terminal > Run Task > Create AI layer**. This compiles the model for
    the NPU of the active target and writes `Model/`. (The repository ships a
    generated layer, so this is only needed after retraining or retargeting.)
-5. Use the CMSIS action buttons to build the application, then select **Run**.
-   Keil Studio starts the Corstone-320 FVP automatically.
+5. Use the CMSIS action buttons to build the application, then select **Run**
+   or **Debug**. Keil Studio starts the Corstone-320 FVP automatically. On
+   macOS, where Arm ships no FVP build, `.vscode/fvp.sh` runs the model in
+   Docker: Docker Desktop must be running, and the first Run or Debug builds
+   the container image (about 100 MB download). On Windows, set `model:` in
+   the csolution's target-set back to `FVP_Corstone_SSE-320` (the shim is a
+   bash script).
 
 A successful run prints the Ethos-U configuration, the profile of the float
 model, both inferences and a pass result:
@@ -70,19 +78,26 @@ the path is three commands plus the one-time venv setup.
 ```
 
 This creates `.venv/` with Vela and PyYAML, all that `create_ai_layer.py`
-needs. It is safe to run again; `--recreate` starts from scratch.
+needs. It is safe to run again; `--recreate` starts from scratch. The wrappers
+use `python3` (`python` on Windows); point them at another interpreter with
+`PYTHON=python3.12 ./setup_venv.sh`. With
+[uv](https://docs.astral.sh/uv/getting-started/installation/) on `PATH`,
+`./setup_venv.sh --uv --python 3.12` creates the environment with `uv venv`
+for that Python version, downloading the interpreter if needed, and installs
+with `uv pip`.
 
 #### 1. Generate the MLOps information
 
 ```bash
-cbuild setup cmsis-litert.csolution.yml --active SSE-320-U85 --packs --update-rte
+cbuild setup cmsis-litert.csolution.yml --active SSE-320-U85 --packs
 ```
 
 This resolves the packs and the active target and writes
 `cmsis-litert.cbuild-mlops.yml`: the processor, NPU and Vela options of the
-target and the location of the AI layer. (`--packs` and `--update-rte` are only
-needed on a fresh checkout. On a checkout without a generated `Model/` layer the
-command reports the missing layer but still writes the file.)
+target and the location of the AI layer. (`--packs` installs missing packs and
+is only needed on a fresh checkout; the layers' RTE configuration is committed,
+so no `--update-rte` is required. On a checkout without a generated `Model/`
+layer the command reports the missing layer but still writes the file.)
 
 #### 2. Create the AI layer
 
@@ -111,12 +126,14 @@ out/cmsis-litert/SSE-320-U85/Debug/cmsis-litert.axf
 #### 4. Run on the FVP
 
 ```bash
-FVP_Corstone_SSE-320 \
-    -f board/Corstone-320/fvp_config.txt \
+.vscode/fvp.sh \
+    -f board/Corstone-320/fvp_config.txt --simlimit 60 \
     -a out/cmsis-litert/SSE-320-U85/Debug/cmsis-litert.axf
 ```
 
-The application ends the simulation when it is done.
+`.vscode/fvp.sh` is the model command the Run and Debug buttons use too; on
+Linux and Windows `FVP_Corstone_SSE-320` can be called directly with the same
+arguments. The application ends the simulation when it is done.
 
 ## How model generation works
 
@@ -185,9 +202,12 @@ driver, and FVP configuration.
 | `Model/` | The trained `.tflite` models and the generated AI layer |
 | `Training/train_model.py` | Trains and exports the sine model |
 | `setup_venv.py` (`.sh` / `.bat`) | Creates the Python environments |
+| `.vscode.d/tasks.json` | The VS Code tasks (venv setup, training, Create AI layer) merged by the CMSIS Solution extension |
+| `.vscode/fvp.sh`, `.vscode/fvp.Dockerfile` | The FVP model command used by Run and Debug; runs the model in Docker on macOS |
 | `board/Corstone-320/` | Corstone-320 board support, Ethos-U driver setup and FVP configuration |
 | `Source/hello_world_test.cpp` | Runs both models and prints the result |
-| `documentation/` | Detailed MLOps and cross-platform notes |
+| `tests/` | The CPU-target fixture CI uses to check the CMSIS-NN variant of the layer |
+| `documentation/mlops-flow.md` | The MLOps flow in detail |
 
 ## Known limitations
 
@@ -198,8 +218,8 @@ driver, and FVP configuration.
 
 ## License
 
-The example code is licensed under Apache-2.0; see `LICENSE`. TensorFlow uses
-the Apache-2.0 license.
+The example code is licensed under Apache-2.0; see `LICENSE`. TensorFlow and
+LiteRT use the Apache-2.0 license.
 
 ## References
 
