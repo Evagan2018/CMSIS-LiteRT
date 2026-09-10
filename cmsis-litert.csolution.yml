@@ -1,8 +1,11 @@
 # Copyright 2026 Arm Limited and/or its affiliates.
 # SPDX-License-Identifier: Apache-2.0
 #
-# TensorFlow Lite Micro "Hello World" (sine model) on the Ethos-U85 of the
-# Corstone-320 (SSE-320) FVP. Three steps build it:
+# LiteRT for Microcontrollers "Hello World" (sine model): a CMSIS reference
+# application. The application consumes STDOUT from a board layer; the
+# SSE-320-U85 target-type below is the tested target, the Corstone-320 FVP
+# with its Ethos-U85. Add other boards through Manage Solution, which offers
+# the compatible board layers of the installed packs. Three steps build it:
 #
 #   cbuild setup cmsis-litert.csolution.yml --active SSE-320-U85
 #   python create_ai_layer.py cmsis-litert.cbuild-mlops.yml
@@ -12,9 +15,15 @@
 # create_ai_layer.py reads the NPU and Vela settings from it, compiles the
 # committed int8 model with Vela and writes the AI layer (Model/).
 solution:
+  description: LiteRT for Microcontrollers Hello World on Ethos-U
   created-for: CMSIS-Toolbox@2.14.1
   cdefault:
   compiler: AC6
+
+  select-compiler: # tested compilers; `compiler:` above is the default
+    - compiler: AC6
+    - compiler: GCC
+    - compiler: CLANG
 
   packs:
     - pack: tensorflow::tensorflow-lite-micro@1.26.2
@@ -29,7 +38,8 @@ solution:
     - pack: ARM::SSE_320_BSP@1.0.0
 
   target-types:
-    # Corstone-320 with an Ethos-U85 NPU, simulated on the Arm FVP.
+    # Corstone-320 with an Ethos-U85 NPU, simulated on the Arm FVP, with the
+    # board layer shipped in board/Corstone-320 (STDOUT and the Ethos-U driver).
     - type: SSE-320-U85
       board: SSE-320
       device: SSE-320-FVP
@@ -70,12 +80,13 @@ solution:
   # create_ai_layer.py. Older toolboxes reject the extra keys.
   mlops:
     description: Hello World sine model for Ethos-U85
+    # The NPU and its Vela configuration default from the device pack of the
+    # selected target; the SSE-320 pack declares none, so they are given here.
+    # For a target without an NPU leave npu: and vela: out: the AI layer then
+    # uses the CMSIS-NN kernels and the int8 model as trained.
     npu:
       type: Ethos-U85
-      # The SSE-320 BSP declares no NPU features, so the MAC count has to be
-      # given here. It must match mps4_board.subsystem.ethosu.num_macs in
-      # board/Corstone-320/fvp_config.txt.
-      macs: 256
+      macs: 256 # must match mps4_board.subsystem.ethosu.num_macs in board/Corstone-320/fvp_config.txt
     vela:
       system: Ethos_U85_SYS_DRAM_Mid # system-config from the Vela config
       memory: Shared_Sram # memory-mode from the Vela config

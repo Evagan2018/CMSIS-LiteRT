@@ -1,13 +1,15 @@
 # LiteRT for Microcontrollers "Hello World" on Ethos-U
 
-This example runs the LiteRT for Microcontrollers (formerly TensorFlow Lite
-Micro) "Hello World" sine model on the Arm **Ethos-U85** NPU of the
-**Corstone-320 (SSE-320)** FVP. It is the
-[Hello World reference application](https://github.com/MDK-Packs/tensorflow-pack/tree/main/tensorflow-build/add/examples/TFLiteRT_HelloWorld)
+This CMSIS reference application runs the LiteRT for Microcontrollers
+(formerly TensorFlow Lite Micro) "Hello World" sine model: once as a float
+model on the CPU, once as an int8 model on the Arm **Ethos-U** NPU when the
+target has one, on the CMSIS-NN kernels otherwise. It is the
+[Hello World example](https://github.com/MDK-Packs/tensorflow-pack/tree/main/tensorflow-build/add/examples/TFLiteRT_HelloWorld)
 of the [`tensorflow::tensorflow-lite-micro`](https://www.keil.arm.com/packs/tensorflow-lite-micro-tensorflow/overview/)
 CMSIS pack, rebuilt around a three-step MLOps flow: the CMSIS-Toolbox describes
 the target, a script turns that into the AI layer, and the toolbox builds the
-application.
+application. The tested target is the **Corstone-320 (SSE-320)** FVP with its
+**Ethos-U85**, whose board layer ships in `board/Corstone-320/`.
 
 ## What the example demonstrates
 
@@ -18,6 +20,24 @@ application.
 - The same application source runs the int8 model on the NPU or, for a target without one, on the
   CMSIS-NN kernels: `AddEthosU()` registers the Ethos-U operator only when the Ethos-U kernels are built.
 - Training is a separate, scripted step that produces committed `.tflite` files.
+
+## Boards
+
+The application consumes `STDOUT` (and 64 KB of heap) from a board layer, as
+declared in `cmsis-litert.cproject.yml`:
+
+- **Corstone-320 FVP** (`SSE-320-U85`): shipped, tested, built by CI. The layer
+  in `board/Corstone-320/` provides the console over semihosting, the Ethos-U85
+  driver and its initialisation.
+- **Other boards**: in the CMSIS view open **Manage Solution**, add a
+  target-type for the board and pick one of the board layers the installed
+  packs offer for it (the extension lists the layers that provide `STDOUT`).
+  On a board without an NPU the int8 model runs on the CMSIS-NN kernels; leave
+  `npu:` and `vela:` out of the `mlops:` node, or let them default from a
+  device pack that describes its NPU. A board with an Ethos-U needs a layer
+  that also selects the Ethos-U driver and initialises the NPU before
+  `app_main()`, as `board/Corstone-320/ethos_setup.c` does; no pack ships such
+  a layer today.
 
 ## Prerequisites
 
@@ -220,8 +240,8 @@ driver, and FVP configuration.
 
 ## Known limitations
 
-- The supplied platform configuration targets Corstone-320 with Ethos-U85;
-  another target needs its corresponding platform integration.
+- Only the Corstone-320 target ships with a board layer; an Ethos-U board
+  needs a layer with the NPU driver and initialisation (see Boards).
 - On silicon with a data cache, the tensor arena needs cache maintenance around
   the NPU invocation; the FVP is cache-transparent.
 
