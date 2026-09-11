@@ -105,6 +105,6 @@ solution:
       clayer: ./Model/model.clayer.yml
       name: HelloWorld
       # Model parameters for create_ai_layer.py: the trained models, relative
-      # to the layer directory, and the delta the test accepts.
+      # to the layer directory. (The test tolerance stays in the firmware.)
       int8-model: model_int8.tflite
       float-model: model_float.tflite
