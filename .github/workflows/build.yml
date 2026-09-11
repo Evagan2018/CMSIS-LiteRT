@@ -132,7 +132,8 @@ jobs:
       - name: Generate the CPU variant of the AI layer
         shell: bash
         run: |
-          cp Model/model_int8.tflite Model/model_float.tflite tests/layer/ 2>/dev/null || { mkdir -p tests/layer; cp Model/model_int8.tflite Model/model_float.tflite tests/layer/; }
+          mkdir -p tests/layer
+          cp Model/model_int8.tflite Model/model_float.tflite tests/layer/
           python create_ai_layer.py tests/cpu.cbuild-mlops.yml
           grep -q 'Kernel&CMSIS-NN' tests/layer/model.clayer.yml
           grep -q 'model_int8_tflite_len = 3376' tests/layer/model_int8.c
