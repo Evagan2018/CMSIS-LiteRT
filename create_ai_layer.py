@@ -47,20 +47,24 @@ TFLM_PACKS = ["tensorflow-lite-micro", "flatbuffers", "gemmlowp", "kissfft", "ru
 
 
 def run_in_venv() -> None:
-    """Re-run under .venv when Vela is not importable from this interpreter."""
-    try:
-        import ethosu.vela  # noqa: F401
-    except ImportError:
-        venv = HERE / ".venv"
-        python = venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
-        # sys.prefix is the venv directory when running inside it (comparing
-        # interpreter paths does not work: venv symlinks resolve to the base).
-        if not python.is_file() or Path(sys.prefix).resolve() == venv.resolve():
-            sys.exit(
-                f"Vela (ethos-u-vela) is not installed for {sys.executable}.\n"
-                "Create the venv first: ./setup_venv.sh (Linux/macOS) or setup_venv.bat (Windows)"
-            )
-        sys.exit(subprocess.run([str(python), __file__, *sys.argv[1:]]).returncode)
+    """Re-run under the project's .venv unless this interpreter already is it.
+
+    Deciding by "does Vela import" is not enough: a Vela installed for the host
+    interpreter would keep the compile outside the environment with the pinned
+    version. sys.prefix is the venv directory when running inside it (comparing
+    interpreter paths does not work: venv symlinks resolve to the base).
+    """
+    venv = HERE / ".venv"
+    if Path(sys.prefix).resolve() == venv.resolve():
+        return
+    python = venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+    if not python.is_file():
+        sys.exit(
+            f"{venv} does not exist.\n"
+            "Create it first: ./setup_venv.sh (Linux/macOS) or setup_venv.bat (Windows)"
+        )
+    print(f"[ai_layer] running in {python}", flush=True)
+    sys.exit(subprocess.run([str(python), __file__, *sys.argv[1:]]).returncode)
 
 
 def pack_versions(mlops_file: Path) -> dict[str, str]:
@@ -96,9 +100,10 @@ def vela_command(mlops: dict, mlops_dir: Path, model: Path, out_dir: Path) -> li
                 "add `macs:` to the csolution's mlops.npu node"
             )
         options = f"--accelerator-config {npu['type'].lower()}-{npu['macs']} {options}"
-    if vela.get("ini"):
-        options += f" --config {mlops_dir / vela['ini']}"
-    return [sys.executable, "-m", "ethosu.vela", str(model), "--output-dir", str(out_dir), *shlex.split(options)]
+    # The ini is a path (possibly with spaces): a separate argument, not part
+    # of the options string that shlex splits.
+    config = ["--config", os.path.relpath(mlops_dir / vela["ini"])] if vela.get("ini") else []
+    return [sys.executable, "-m", "ethosu.vela", str(model), "--output-dir", str(out_dir), *shlex.split(options), *config]
 
 
 def model_files(mlops: dict, layer_dir: Path) -> tuple[Path, Path]:
@@ -127,8 +132,9 @@ def compile_int8(mlops: dict, mlops_dir: Path, layer_dir: Path, model: Path) -> 
         summary = f"{counts.get('NPU', '?')} NPU / {counts.get('CPU', '?')} CPU operators"
         if counts.get("CPU", "0") != "0":
             sys.exit(
-                f"[ai_layer] Vela left {counts['CPU']} operator(s) on the CPU; the "
-                "application only registers the Ethos-U operator for the int8 model.\n"
+                f"[ai_layer] Vela left {counts['CPU']} operator(s) on the CPU; this "
+                "example expects the int8 model to run entirely on the NPU (the "
+                "resolver registers FullyConnected for the float model only).\n"
                 + result.stdout
             )
         compiled = Path(tmp) / f"{model.stem}_vela.tflite"

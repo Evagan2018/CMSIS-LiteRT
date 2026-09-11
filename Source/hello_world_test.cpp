@@ -177,7 +177,7 @@ extern "C" int app_main(void) {
   } else {
     printf("~~~TESTS FAILED~~~ (max delta %.3f > %.2f)\n", max_delta, kTolerance);
   }
-  printf("\x04");  // EOT: stops FVP and pyOCD stdio monitors
+  printf("\x04");  // EOT: ends the FVP run (semihosting exit); a board just sees a 0x04
   fflush(stdout);
   return max_delta <= kTolerance ? 0 : 1;
 }

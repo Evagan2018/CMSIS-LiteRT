@@ -37,7 +37,10 @@
                 "cbuildRunFile": "${command:cmsis-csolution.getCbuildRunFile}",
                 "updateConfiguration": "manual"
                 // Flip to "auto", run "Update Debug Tasks and Launch Configurations",
-                // then reapply the target.server/serverParameters fields above.
+                // then reapply target.server/serverParameters and the three
+                // readiness fields below: "port": "" (an empty port makes the
+                // adapter wait for the banner instead of connecting at once),
+                // "serverPortRegExp" and "portDetectionTimeout".
             }
         },
         {

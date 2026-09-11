@@ -36,12 +36,14 @@ declared in `cmsis-litert.cproject.yml`:
   `npu:` and `vela:` out of the `mlops:` node, or let them default from a
   device pack that describes its NPU. A board with an Ethos-U needs a layer
   that also selects the Ethos-U driver and initialises the NPU before
-  `app_main()`, as `board/Corstone-320/ethos_setup.c` does; no pack ships such
-  a layer today.
+  `app_main()`, as `board/Corstone-320/ethos_setup.c` does. The Alif Ensemble
+  pack ships one for the DevKit-E8 (`Boards/DevKit-e8/Layers/M55_HP/
+  Board_HP-U85.clayer.yml`: STDOUT, Ethos-U85 driver, `ethos_setup.c`); it is
+  untested with this application.
 
 ## Prerequisites
 
-- Python `>=3.10` for the build (Vela); Python `3.9` to `3.12` only if you want to retrain (TensorFlow 2.17).
+- Python `3.10` to `3.14` for the build (Vela); Python `3.9` to `3.12` only if you want to retrain (TensorFlow 2.17).
 - [Keil Studio for VS Code](https://marketplace.visualstudio.com/items?itemName=Arm.keil-studio-pack) from the VS Code marketplace.
 - Tools listed in [`vcpkg-configuration.json`](./vcpkg-configuration.json) (CMSIS-Toolbox 2.14.1, Arm Compiler 6, Corstone-320 FVP); the Arm Tools Environment Manager installs them when the project is opened.
 - This branch needs CMSIS-Toolbox 2.14.1+p88 or newer, as bundled with the Keil Studio csolution extension 1.70.1 or newer; see [How model generation works](#how-model-generation-works). The `main` branch works with the released 2.14.1.
@@ -78,11 +80,15 @@ Tensorflow LiteRT Hello World!
 (INFO) Profile Memory and Latency
 ...
 (INFO) Load Float Model and Perform Inference (CPU)
-Input [0.000] = 0.036 / Delta 0.036
-...
+Input [0.000] = 0.001 / Delta 0.001
+Input [1.000] = 0.830 / Delta 0.012
+Input [3.000] = 0.096 / Delta 0.045
+Input [5.000] = -0.955 / Delta 0.004
 (INFO) Load Quantized Model and Perform Inference (Ethos-U)
-Input [0.770] = 0.731 / Delta 0.034
-...
+Input [0.770] = 0.715 / Delta 0.018
+Input [1.570] = 0.987 / Delta 0.013
+Input [2.300] = 0.722 / Delta 0.023
+Input [3.140] = -0.023 / Delta 0.025
 ~~~ALL TESTS PASSED~~~
 ```
 
@@ -154,7 +160,14 @@ out/cmsis-litert/SSE-320-U85/Debug/cmsis-litert.axf
 
 `.vscode/fvp.sh` is the model command the Run and Debug buttons use too; on
 Linux and Windows `FVP_Corstone_SSE-320` can be called directly with the same
-arguments. The application ends the simulation when it is done.
+arguments. The application ends the simulation when it is done, and the model
+exits with status 0 either way, so check the verdict in the output as CI does:
+
+```bash
+.vscode/fvp.sh -f board/Corstone-320/fvp_config.txt --simlimit 60 \
+    -a out/cmsis-litert/SSE-320-U85/Debug/cmsis-litert.axf | tee fvp_stdout.log
+grep "~~~ALL TESTS PASSED~~~" fvp_stdout.log
+```
 
 ## How model generation works
 
@@ -205,9 +218,12 @@ Training/.venv/bin/python Training/train_model.py
 ```
 
 `Training/train_model.py` is the pack notebook's training as a script: it
-trains the sine model with a fixed seed, converts it to a float and a
-fully-integer int8 `.tflite`, and writes both into `Model/`. Then re-run steps 2
-and 3.
+trains the sine model with fixed seeds (Python, NumPy and TensorFlow, so two
+runs give the same models), converts it to a float and a fully-integer int8
+`.tflite`, checks both against `sin(x)` at the inputs the firmware tests with
+the firmware's tolerance, and only then writes them into `Model/`. A run whose
+models would fail on the target exits with status 1 and leaves `Model/` as it
+was. Then re-run steps 2 and 3.
 
 ## Adapting the example
 
@@ -244,6 +260,10 @@ driver, and FVP configuration.
   needs a layer with the NPU driver and initialisation (see Boards).
 - On silicon with a data cache, the tensor arena needs cache maintenance around
   the NPU invocation; the FVP is cache-transparent.
+- The solution selects CMSIS-NN 8.0.0 while `tensorflow-lite-micro@1.26.2`
+  declares CMSIS-NN 7.x, so every build prints a pack-version warning. The
+  combination is tested here; 8.0.0 needs the `ARM_NN_ENABLE_F32`/`F16`
+  defines in the generated layer to compile (see issue #1).
 
 ## License
 

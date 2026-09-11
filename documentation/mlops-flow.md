@@ -93,9 +93,10 @@ MLOps system. It reads the file and:
 1. runs Vela on `Model/model_int8.tflite` with exactly the options from
    `vela.options` (plus `--config` when the file names a `vela.ini`); the Python
    code contains no NPU configuration. The step fails if Vela leaves an
-   operator on the CPU, because the application only registers the Ethos-U
-   operator for the int8 model. Without an `npu:` node the int8 model is used as
-   trained;
+   operator on the CPU: this example runs the int8 model entirely on the NPU
+   (the resolver registers FullyConnected for the float model and the Ethos-U
+   operator for the int8 one, not the CMSIS-NN fallback for a partly delegated
+   graph). Without an `npu:` node the int8 model is used as trained;
 2. writes the layer into the directory of `model.clayer`:
 
 | File | Content |
