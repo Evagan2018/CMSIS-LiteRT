@@ -125,7 +125,7 @@ jobs:
         run: ./setup_venv.sh
 
       - name: Generate the MLOps information
-        run: cbuild setup ${SOLUTION}.csolution.yml --active ${TARGET} --packs
+        run: cbuild setup ${SOLUTION}.csolution.yml --active ${TARGET} --packs --update-rte
 
       - name: Create the AI layer
         run: python3 create_ai_layer.py ${SOLUTION}.cbuild-mlops.yml
