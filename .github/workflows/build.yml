@@ -64,7 +64,7 @@ jobs:
           # following steps, overriding the version activated by vcpkg.
           echo "${TOOLBOX_BIN}" >> "${GITHUB_PATH}"
   
-      # DIAGNOSIS
+      # D I A G N O S I S
       - name: Verify nightly CMSIS-Toolbox
         shell: bash
         run: |
@@ -89,6 +89,16 @@ jobs:
 
       - name: Activate Arm tool license
         uses: ARM-software/cmsis-actions/armlm@v1
+
+      # --------------------------------------------------------------
+      # Add pack
+      - name: Add CS2320_Pack_200.pack.
+        path: ./Patch/
+        run: |
+          cpackget add ARM.SSE_320_BSP.2.0.0.pack --agree-embedded-license
+
+      # --------------------------------------------------------------
+
 
       # The FVP loads the runner's libpython3.11, whose standard library is
       # not where that build's prefix says; the model then dies at start-up
