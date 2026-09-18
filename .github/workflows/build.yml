@@ -44,9 +44,9 @@ jobs:
       - name: Download nightly CMSIS-Toolbox
         uses: actions/download-artifact@v8
         with:
-          artifact-ids: "10179205258"
+          artifact-ids: "10334971107"
           repository: Open-CMSIS-Pack/cmsis-toolbox
-          run-id: "34546425921"
+          run-id: "34792345650"
           github-token: ${{ secrets.CMSIS_TOOLBOX_TOKEN }}
           path: ${{ runner.temp }}/cmsis-toolbox-nightly
   
