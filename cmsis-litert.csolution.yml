@@ -26,15 +26,15 @@ solution:
     - compiler: CLANG
 
   packs:
-    - pack: tensorflow::tensorflow-lite-micro@1.26.2
-    - pack: tensorflow::flatbuffers@1.26.2
-    - pack: tensorflow::gemmlowp@1.26.2
-    - pack: tensorflow::kissfft@1.26.2
-    - pack: tensorflow::ruy@1.26.2
-    - pack: ARM::ethos-u-core-driver@1.26.2
+    - pack: tensorflow::tensorflow-lite-micro@1.26.5
+    - pack: tensorflow::flatbuffers@1.26.5
+    - pack: tensorflow::gemmlowp@1.26.5
+    - pack: tensorflow::kissfft@1.26.5
+    - pack: tensorflow::ruy@1.26.5
+    - pack: ARM::ethos-u-core-driver@1.26.5
     - pack: ARM::CMSIS-NN@8.0.0
     - pack: ARM::CMSIS
-    - pack: ARM::CMSIS-Compiler@^2.1.0
+    - pack: ARM::CMSIS-Compiler@^2.3.0
     - pack: ARM::SSE_320_BSP@1.0.0
 
   misc:
