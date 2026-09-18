@@ -93,7 +93,7 @@ jobs:
       # --------------------------------------------------------------
       # Add pack
       - name: Add CS2320_Pack_200.pack.
-        path: ./Patch/
+        working-directory: ./Patch
         run: |
           cpackget add ARM.SSE_320_BSP.2.0.0.pack --agree-embedded-license
 
