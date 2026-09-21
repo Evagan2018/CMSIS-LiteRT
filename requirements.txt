@@ -1,5 +1,5 @@
-# Python packages for create_ai_layer.py: the Ethos-U
-# compiler and a YAML reader for the *.cbuild-mlops.yml. Training the model
-# needs TensorFlow as well; that lives in Training/requirements.txt.
+# Runtime dependencies for create_ai_layer.py: Ethos-U Vela compiles the model,
+# while PyYAML reads its configuration from *.cbuild-mlops.yml. 
+# Model-training dependencies, including TensorFlow, are listed in Training/requirements.txt.
 ethos-u-vela==5.1.0
 PyYAML>=6
