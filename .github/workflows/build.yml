@@ -92,11 +92,10 @@ jobs:
 
       # --------------------------------------------------------------
       # Add pack
-      - name: Add CS2320_Pack_200.pack.
-        working-directory: ./Patch
-        run: |
-          cpackget add ARM.SSE_320_BSP.2.0.0.pack --agree-embedded-license
-
+#      - name: Add CS2320_Pack_200.pack.
+#        working-directory: ./Patch
+#        run: |
+#          cpackget add ARM.SSE_320_BSP.2.0.0.pack --agree-embedded-license
       # --------------------------------------------------------------
 
 
@@ -110,11 +109,27 @@ jobs:
         with:
           python-version: '3.11'
 
+#      - name: Cache packs
+#        uses: actions/cache@v6
+#        with:
+#          key: cmsis-packs-${{ hashFiles('*.csolution.yml') }}
+#          path: /home/runner/.cache/arm/packs
+
       - name: Cache packs
         uses: actions/cache@v6
         with:
-          key: cmsis-packs-${{ hashFiles('*.csolution.yml') }}
+          key: cmsis-packs-${{ hashFiles(
+            '*.csolution.yml',
+            'Patch/ARM.SSE_320_BSP.2.0.0.pack'
+          ) }}
           path: /home/runner/.cache/arm/packs
+
+      - name: Add SSE-320 BSP pack
+        working-directory: ./Patch
+        run: |
+          cpackget add ARM.SSE_320_BSP.2.0.0.pack \
+            --agree-embedded-license
+
 
       - name: Cache Vela venv
         uses: actions/cache@v6
@@ -178,11 +193,6 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v7
-
-#      - name: Set up Python
-#        uses: actions/setup-python@v7
-#        with:
-#          python-version: '3.12'
 
       - name: Create Vela venv (POSIX)
         if: runner.os != 'Windows'
