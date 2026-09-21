@@ -22,7 +22,7 @@ jobs:
   # an Arm user-based license, so matrixing this across hosts is not cheap.
   build-and-run:
     name: Build and run on Corstone-320 (${{ matrix.toolchain }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
 
     strategy:
       fail-fast: false
@@ -100,10 +100,11 @@ jobs:
       # --------------------------------------------------------------
 
 
-      # The FVP loads the runner's libpython3.11, whose standard library is
-      # not where that build's prefix says; the model then dies at start-up
-      # with "Fatal Python error: init_fs_encoding". PYTHONHOME (set on the
-      # FVP step only) points it at a complete Python 3.11.
+      # The FVP embeds libpython3.11 but cannot locate the matching Python
+      # standard library on the GitHub runner. It therefore fails during
+      # startup with "Fatal Python error: init_fs_encoding". Install a
+      # complete Python 3.11 distribution and set PYTHONHOME only for the
+      # FVP step so embedded Python can find its standard library
       - name: Set up Python 3.11 for the FVP
         uses: actions/setup-python@v7
         with:
@@ -171,16 +172,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+#        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-26.04, macos-latest, windows-latest]
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v7
 
-      - name: Set up Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: '3.12'
+#      - name: Set up Python
+#        uses: actions/setup-python@v7
+#        with:
+#          python-version: '3.12'
 
       - name: Create Vela venv (POSIX)
         if: runner.os != 'Windows'
