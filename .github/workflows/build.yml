@@ -119,9 +119,9 @@ jobs:
         uses: actions/cache@v6
         with:
           key: cmsis-packs-${{ hashFiles(
-            '*.csolution.yml',
-            'Patch/ARM.SSE_320_BSP.2.0.0.pack'
-          ) }}
+               '*.csolution.yml',
+               'Patch/ARM.SSE_320_BSP.2.0.0.pack'
+               ) }}
           path: /home/runner/.cache/arm/packs
 
       - name: Add SSE-320 BSP pack
