@@ -95,10 +95,10 @@ jobs:
       # startup with "Fatal Python error: init_fs_encoding". Install a
       # complete Python 3.11 distribution and set PYTHONHOME only for the
       # FVP step so embedded Python can find its standard library
-      - name: Set up Python 3.11 for the FVP
-        uses: actions/setup-python@v7
-        with:
-          python-version: '3.11'
+#      - name: Set up Python 3.11 for the FVP
+#        uses: actions/setup-python@v7
+#        with:
+#          python-version: '3.11'
 
       - name: Cache packs
         uses: actions/cache@v6
