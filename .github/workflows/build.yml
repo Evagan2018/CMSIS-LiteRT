@@ -38,7 +38,7 @@ jobs:
 
       # --------------------------------------------------------------
       # S T A R T  T O O L  I N J E C T I O N 
-  
+
       # CMSIS_TOOLBOX_TOKEN must have Actions: Read permission for
       # Open-CMSIS-Pack/cmsis-toolbox.
       - name: Download nightly CMSIS-Toolbox
@@ -49,30 +49,30 @@ jobs:
           run-id: "35547518158"
           github-token: ${{ secrets.CMSIS_TOOLBOX_TOKEN }}
           path: ${{ runner.temp }}/cmsis-toolbox-nightly
-  
+
       - name: Override CMSIS-Toolbox with nightly version
         shell: bash
         run: |
           set -euo pipefail
-  
+
           TOOLBOX_BIN="${RUNNER_TEMP}/cmsis-toolbox-nightly/bin"
-  
+
           test -x "${TOOLBOX_BIN}/cbuild" ||
             chmod -R +x "${TOOLBOX_BIN}"
-  
+
           # Entries written to GITHUB_PATH are prepended to PATH for all
           # following steps, overriding the version activated by vcpkg.
           echo "${TOOLBOX_BIN}" >> "${GITHUB_PATH}"
-  
+
       # D I A G N O S I S
       - name: Verify nightly CMSIS-Toolbox
         shell: bash
         run: |
           set -euo pipefail
-  
+
           EXPECTED_BIN="${RUNNER_TEMP}/cmsis-toolbox-nightly/bin"
           ACTUAL_CBUILD="$(command -v cbuild)"
-  
+
           case "${ACTUAL_CBUILD}" in
             "${EXPECTED_BIN}/"*) ;;
             *)
@@ -80,10 +80,10 @@ jobs:
               exit 1
               ;;
           esac
-  
+
           echo "Using cbuild: ${ACTUAL_CBUILD}"
           cbuild --version
-  
+
       # E N D  T O O L  I N J E C T I O N 
       # --------------------------------------------------------------
 
@@ -95,10 +95,10 @@ jobs:
       # startup with "Fatal Python error: init_fs_encoding". Install a
       # complete Python 3.11 distribution and set PYTHONHOME only for the
       # FVP step so embedded Python can find its standard library
-#      - name: Set up Python 3.11 for the FVP
-#        uses: actions/setup-python@v7
-#        with:
-#          python-version: '3.11'
+      - name: Set up Python 3.11 for the FVP
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
 
       - name: Cache packs
         uses: actions/cache@v6
