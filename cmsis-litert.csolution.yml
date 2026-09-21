@@ -35,7 +35,7 @@ solution:
     - pack: ARM::CMSIS-NN@8.0.0
     - pack: ARM::CMSIS
     - pack: ARM::CMSIS-Compiler@^2.3.0
-    - pack: ARM::SSE_320_BSP@1.0.0
+    - pack: ARM::SSE_320_BSP@2.0.0
 
   misc:
     # CMSIS-Toolbox 2.14.1 passes -mfpu=fpv5-sp-d16 to Clang for the Cortex-M85,
