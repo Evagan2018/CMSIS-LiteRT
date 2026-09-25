@@ -53,16 +53,9 @@ jobs:
         uses: actions/cache@v6
         with:
           key: cmsis-packs-${{ hashFiles(
-               '*.csolution.yml',
-               'Patch/ARM.SSE_320_BSP.2.0.0.pack'
+               '*.csolution.yml'
                ) }}
           path: /home/runner/.cache/arm/packs
-
-      - name: Add SSE-320 BSP pack
-        working-directory: ./Patch
-        run: |
-          cpackget add ARM.SSE_320_BSP.2.0.0.pack \
-            --agree-embedded-license
 
       - name: Cache Vela venv
         uses: actions/cache@v6
